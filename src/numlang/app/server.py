@@ -177,20 +177,22 @@ def make_server(port=8765, studio=None):
     lock = Lock()
 
     class Handler(BaseHTTPRequestHandler):
+        timeout = 10  # Bound the wait for incomplete local HTTP requests.
+
         def log_message(self, *_):
             pass  # Frame requests would otherwise flood CMD.
 
         def send_bytes(self, status, body, mime):
-            self.send_response(status)
-            self.send_header('Content-Type', mime)
-            self.send_header('Content-Length', str(len(body)))
-            self.send_header('Cache-Control', 'no-store')
-            self.send_header('X-Content-Type-Options', 'nosniff')
-            self.end_headers()
             try:
+                self.send_response(status)
+                self.send_header('Content-Type', mime)
+                self.send_header('Content-Length', str(len(body)))
+                self.send_header('Cache-Control', 'no-store')
+                self.send_header('X-Content-Type-Options', 'nosniff')
+                self.end_headers()
                 self.wfile.write(body)
-            except (BrokenPipeError, ConnectionResetError):
-                pass
+            except (ConnectionError, TimeoutError):
+                pass  # The client may disconnect before the response is written.
 
         def send_json(self, status, data):
             self.send_bytes(status, json.dumps(data, allow_nan=False).encode('utf-8'),
@@ -208,6 +210,30 @@ def make_server(port=8765, studio=None):
                 self.send_json(404, {'error': 'not found'})
 
         def do_POST(self):
+            # Read the bounded request body before replying to rejected POSTs.
+            # Closing Windows TCP sockets with unread data can abort the
+            # connection before the client receives its HTTP error response.
+            try:
+                if self.headers.get('Transfer-Encoding') is not None:
+                    raise ValueError('unsupported transfer encoding')
+                lengths = self.headers.get_all('Content-Length') or []
+                if len(lengths) != 1:
+                    raise ValueError('expected one Content-Length header')
+                size = int(lengths[0])
+                if not 0 < size <= MAX_BODY:
+                    raise ValueError('invalid request size')
+            except ValueError as exc:
+                self.send_json(400, {'error': str(exc)})
+                return
+            try:
+                body = self.rfile.read(size)
+            except (ConnectionError, TimeoutError):
+                return
+            if len(body) != size:
+                self.send_json(400, {'error': 'incomplete request body'})
+                return
+
+            # Consume bytes only; never interpret or execute rejected requests.
             origin = self.headers.get('Origin')
             if not self.local_host() or origin not in (None, f'http://127.0.0.1:{self.server.server_port}'):
                 self.send_json(403, {'error': 'local requests only'})
@@ -219,10 +245,7 @@ def make_server(port=8765, studio=None):
                 self.send_json(415, {'error': 'expected JSON'})
                 return
             try:
-                size = int(self.headers.get('Content-Length', '0'))
-                if not 0 < size <= MAX_BODY:
-                    raise ValueError('invalid request size')
-                data = json.loads(self.rfile.read(size))
+                data = json.loads(body)
                 with lock:
                     result = studio.action(data)
                 self.send_json(200, result)

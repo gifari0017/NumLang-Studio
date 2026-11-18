@@ -117,3 +117,43 @@ def test_http_routes_and_errors():
         server.shutdown()
         server.server_close()
         t.join(timeout=5)
+
+
+@pytest.mark.parametrize('path,origin,mime,status', [
+    ('/api', 'https://example.com', 'application/json', 403),
+    ('/missing', None, 'application/json', 404),
+    ('/api', None, 'text/plain', 415),
+])
+def test_rejected_post_consumes_body_without_execution(path, origin, mime, status):
+    """A rejected POST must not close a socket while its body is in flight."""
+    import select
+    import socket
+    from http.client import HTTPResponse
+
+    studio = Studio()
+    studio.cloth.t = 1.0
+    server = make_server(0, studio=studio)
+    t = Thread(target=server.serve_forever, daemon=True)
+    t.start()
+    body = b'{"action":"reset"}'
+    try:
+        with socket.create_connection(('127.0.0.1', server.server_port), timeout=5) as conn:
+            headers = [f'POST {path} HTTP/1.1',
+                       f'Host: 127.0.0.1:{server.server_port}',
+                       f'Content-Type: {mime}', f'Content-Length: {len(body)}',
+                       'Connection: close']
+            if origin:
+                headers.append(f'Origin: {origin}')
+            conn.sendall(('\r\n'.join(headers) + '\r\n\r\n').encode('ascii'))
+            # Deliberately send the body separately to expose premature replies.
+            assert not select.select([conn], [], [], .15)[0]
+            conn.sendall(body)
+            with HTTPResponse(conn) as response:
+                response.begin()
+                assert response.status == status
+                assert 'error' in json.loads(response.read())
+        assert studio.cloth.t == 1.0  # The reset was never executed.
+    finally:
+        server.shutdown()
+        server.server_close()
+        t.join(timeout=5)
