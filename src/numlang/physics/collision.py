@@ -1,0 +1,50 @@
+"""Optional horizontal floor: continuous detection on a linear step path.
+
+Positive y points down. Reuse the course root solvers, not an external library.
+"""
+from dataclasses import dataclass
+import math
+from numlang.core.roots import bisection, newton
+
+
+@dataclass(frozen=True)
+class Impact:
+    time: float  # seconds from start of this integration step
+    y: float
+    vy: float
+    bisection_iterations: int
+    newton_iterations: int
+
+
+def floor_impact(y0, y1, vy0, vy1, h, floor, restitution=0.2):
+    """Return None or the corrected normal state for a predicted floor crossing.
+
+    The tentative step's endpoints define a linear trajectory for detection.
+    After impact, freeze the reflected normal velocity for the remaining time.
+    This is an approximate contact model, not a full event-resolved integrator.
+    """
+    if not all(map(math.isfinite, (y0, y1, vy0, vy1, h, floor, restitution))):
+        raise ValueError('collision parameters must be finite')
+    if h <= 0 or not 0 <= restitution <= 1:
+        raise ValueError('collision needs positive h and restitution in [0, 1]')
+    if y1 < floor or (y1 == floor and vy1 <= 0):
+        return None
+    if y0 >= floor:
+        # Already touching or overlapping: no interior sign-change bracket.
+        tau, bi = 0., 0
+    elif y1 == floor:
+        tau, bi = h, 0
+    else:
+        path = lambda t: y0 + (y1-y0)*t/h - floor
+        hit = bisection(path, 0., h, tol=1e-10)
+        if not hit.converged:
+            raise ArithmeticError('floor crossing did not converge')
+        tau, bi = hit.root, hit.iterations
+    # Newton projection solves g(y)=y-floor=0 (constant derivative 1).
+    contact = newton(lambda y: y-floor, lambda y: 1., y1)
+    if not contact.converged:
+        raise ArithmeticError('floor projection did not converge')
+    impact_v = vy0 + (vy1-vy0)*(tau/h)
+    # Never reflect a velocity already pointing away from the floor.
+    rebound = -restitution*max(0., impact_v) if impact_v >= 0 else impact_v
+    return Impact(tau, contact.root + (h-tau)*rebound, rebound, bi, contact.iterations)

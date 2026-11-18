@@ -9,6 +9,7 @@ import numpy as np
 from numba import njit
 from numlang.core.linear import SingularMatrixError
 from numlang.core.linear_fast import gauss_solve_array
+from numlang.physics.collision import floor_impact
 
 MASS = 0.015
 GRAVITY = 9.81
@@ -191,6 +192,13 @@ class Cloth:
         self.weights = np.array(weights, dtype=np.float64)
         self.pinned = np.zeros(cols*rows, dtype=np.bool_)
         self.pinned[:cols:2] = True
+        self.floor_enabled = False
+        # Leave two grid spacings beneath the relaxed bottom row so
+        # ordinary gravitational sag does not immediately hit the floor.
+        self.floor_y = (rows + 1)*spacing
+        # Contact hysteresis: a node must separate by 2% of a grid spacing
+        # before another impact is counted. Suppresses numerical chatter.
+        self.floor_release_gap = .02*spacing
         self.reset()
 
     @classmethod
@@ -215,6 +223,9 @@ class Cloth:
         self.exploded = False
         self.energy = 0.0
         self.reason = ''
+        self.contacts = 0
+        self.last_impact = None
+        self.floor_contact = np.zeros(len(self.x), dtype=np.bool_)
 
     @property
     def fixed(self):
@@ -233,8 +244,28 @@ class Cloth:
         if not math.isfinite(x) or not math.isfinite(y):
             raise ValueError('drag position must be finite')
         self.drag = index
+        if self.floor_enabled:
+            y = min(y, self.floor_y)
+            if y >= self.floor_y:
+                # Mouse placement is not a simulated impact.
+                self.floor_contact[index] = True
+            elif y < self.floor_y - self.floor_release_gap:
+                self.floor_contact[index] = False
         self.x[index] = x, y
         self.v[index] = 0.
+
+    def set_floor(self, enabled):
+        self.floor_enabled = bool(enabled)
+        self.floor_contact[:] = False
+        if enabled:
+            # Existing overlap/touching is contact, not a new impact.
+            for i in range(len(self.x)):
+                if not self.pinned[i] and self.x[i, 1] >= self.floor_y:
+                    self.x[i, 1] = self.floor_y
+                    self.v[i, 1] = min(0., self.v[i, 1])
+                    self.floor_contact[i] = True
+        self.contacts = 0
+        self.last_impact = None
 
     def release(self):
         self.drag = None
@@ -279,6 +310,37 @@ class Cloth:
             self.exploded = True
             self.reason = 'energy ran away'
             return False
+        # Detect blow-up before contact can mask it. Correct only finite states.
+        if self.floor_enabled:
+            release_y = self.floor_y - self.floor_release_gap
+            for i in range(len(xn)):
+                if fixed[i]:
+                    continue
+                y0 = self.x[i, 1]
+                if y0 < release_y:
+                    self.floor_contact[i] = False
+                if xn[i, 1] < self.floor_y:
+                    if xn[i, 1] < release_y:
+                        self.floor_contact[i] = False
+                    continue
+                hit = floor_impact(y0, xn[i, 1], self.v[i, 1], vn[i, 1], h, self.floor_y)
+                if hit is not None:
+                    new_impact = not self.floor_contact[i] and y0 < self.floor_y
+                    xn[i, 1], vn[i, 1] = hit.y, hit.vy
+                    if new_impact:
+                        # Record the first crossing of each contact episode only.
+                        self.contacts += 1
+                        self.last_impact = hit
+                    elif abs(hit.vy) <= GRAVITY*h:
+                        # A tiny repeated rebound is treated as resting contact.
+                        # Keep enforcing the floor, without inventing a new hit.
+                        xn[i, 1], vn[i, 1] = self.floor_y, 0.
+                    self.floor_contact[i] = xn[i, 1] >= release_y
+            self.energy = float(mechanical_energy(xn, vn, self.edges, self.rest, self.weights, self.alive, self.stiffness))
+            if not math.isfinite(self.energy) or self.energy > ENERGY_LIMIT:
+                self.exploded = True
+                self.reason = 'energy ran away after contact'
+                return False
         self.x, self.v = xn, vn
         return True
 

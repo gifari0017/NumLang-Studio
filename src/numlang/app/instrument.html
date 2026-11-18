@@ -23,7 +23,7 @@ button{font:inherit;cursor:pointer;color:inherit}
 .brand b{font-weight:800;font-size:28px;letter-spacing:.16em}
 .brand b.o{font-weight:700;color:var(--orange)}
 .brand span{font-size:12px;letter-spacing:.14em;color:var(--muted);margin-left:12px}
-.leds{display:flex;gap:26px;align-items:center;font-size:12px;letter-spacing:.14em;color:#4A473F}
+.leds{display:flex;gap:15px;align-items:center;font-size:12px;letter-spacing:.14em;color:#4A473F}
 .led{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px;vertical-align:-1px;background:#CFCABD;box-shadow:inset 0 1px 2px rgba(0,0,0,.3)}
 .led.on-g{background:#3F9B4B;box-shadow:0 0 0 2px rgba(0,0,0,.06),0 0 8px rgba(63,155,75,.7)}
 .led.on-o{background:#FF5A1F;box-shadow:0 0 0 2px rgba(0,0,0,.06),0 0 8px rgba(255,90,31,.7)}
@@ -74,7 +74,7 @@ button{font:inherit;cursor:pointer;color:inherit}
 #stat.err{color:#B83A0E;font-weight:600}
 #paperbar{display:flex;justify-content:space-between;align-items:center;gap:8px}
 #paperbar .mini{padding:5px 10px;background:#ECE9E1}
-#cut[aria-pressed=true]{color:#B83A0E;background:#E4E0D5;box-shadow:inset 0 2px 5px #B9B4A6}
+#cut[aria-pressed=true],#floor[aria-pressed=true]{color:#B83A0E;background:#E4E0D5;box-shadow:inset 0 2px 5px #B9B4A6}
 #stat{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #paperbar .mini{white-space:nowrap;letter-spacing:.03em}
 #resultsDialog{width:min(900px,90vw);max-height:85vh;border:6px solid #2B2B2E;border-radius:16px;background:#FBFAF5;color:var(--ink);padding:22px;box-shadow:0 16px 60px #0004}
@@ -94,6 +94,7 @@ button{font:inherit;cursor:pointer;color:inherit}
 <div id="top">
 <div class="brand"><b>NUMLANG</b><b class="o">STUDIO</b><span class="mono">NL-01 · PYTHON ENGINE</span></div>
 <div class="leds mono">
+<button type="button" class="mini" id="floor" aria-pressed="false">FLOOR: OFF</button>
 <button type="button" class="mini" id="cut" aria-pressed="false">CUT: OFF</button>
 <button type="button" class="mini" id="reset">RESET</button>
 <button type="button" class="mini" id="pause" aria-pressed="false">PAUSE</button>
@@ -193,11 +194,13 @@ knobsEl.addEventListener('keydown',e=>{const s=e.target.closest('svg');if(!s)ret
 knobsEl.addEventListener('wheel',e=>{const s=e.target.closest('svg');if(!s)return;e.preventDefault();const k=KN[+s.dataset.i];setKnob(k,k.get()-Math.sign(e.deltaY)*k.step);},{passive:false});
 function sync(){if(!state)return;
   const {method,h,stiffness,wind,cols,rows,spacing,t,exploded,reason,paused}=state;
-  SC=Math.min(620,660/((cols-1)*spacing),315/((rows-1)*spacing));
+  SC=Math.min(620,660/((cols-1)*spacing),315/((rows-1)*spacing),state.floor_enabled?340/state.floor_y:Infinity);
   document.querySelectorAll('.key').forEach(b=>b.setAttribute('aria-pressed',b.dataset.m===method));
   KN.forEach(k=>{const v=k.get(),f=(v-k.min)/(k.max-k.min);k.ptr.setAttribute('transform','rotate('+(-135+270*f).toFixed(1)+' 60 60)');k.out.textContent=k.fmt(v);k.svg.setAttribute('aria-valuenow',v);});
   $('hd1').textContent=MNAME[method]+' · h '+(h*1000).toFixed(1)+' ms · k '+stiffness+' · '+cols+'×'+rows;
-  $('tt').textContent='T = '+t.toFixed(2)+' S';$('over').hidden=!exploded;
+  $('floor').textContent='FLOOR: '+(state.floor_enabled?'ON':'OFF');
+  $('floor').setAttribute('aria-pressed',state.floor_enabled);
+  $('tt').textContent=(state.floor_enabled?'HITS '+state.contacts+' · ':'')+'SIM T = '+t.toFixed(2)+' S';$('over').hidden=!exploded;
   $('clip').className='led'+(exploded?' on-r':'');
   $('overMsg').textContent=MNAME[method]+' · H = '+(h*1000).toFixed(1)+' MS · '+reason.toUpperCase();
   $('pause').textContent=paused?'PLAY':'PAUSE';$('pause').setAttribute('aria-pressed',paused);
@@ -226,6 +229,9 @@ function draw(){g.clearRect(0,0,CW,CH);if(!state)return;
   const {positions,pinned,springs,drag,cols,spacing}=state;
   const X=i=>OX+positions[i][0]*SC,Y=i=>OY+positions[i][1]*SC;
   g.lineCap='round';g.lineJoin='round';g.lineWidth=2;
+  if(state.floor_enabled){const fy=OY+state.floor_y*SC;g.strokeStyle='rgb(184,58,14)';g.beginPath();g.moveTo(25,fy);g.lineTo(CW-25,fy);g.stroke();
+    g.fillStyle='rgb(184,58,14)';g.font='11px monospace';
+    const hit=state.last_impact;g.fillText(hit?'BISECTION '+hit.bisection_iterations+' · NEWTON '+hit.newton_iterations+' · LAST HIT '+(hit.time*1000).toFixed(3)+' ms':'FLOOR · WAITING FOR IMPACT',25,fy+16);}
   const half=(cols-1)*spacing*SC/2+22;g.fillStyle='rgb(28,38,22)';g.fillRect(OX-half,OY-16,half*2,7);
   for(const [id,i,j,strain] of springs){g.strokeStyle=mix(INK,HOT,Math.min(1,Math.abs(strain??0)/.14));g.beginPath();g.moveTo(X(i),Y(i));g.lineTo(X(j),Y(j));g.stroke();}
   positions.forEach((p,i)=>{const px=X(i),py=Y(i);g.fillStyle=i===drag?'rgb(184,58,14)':'rgb(28,38,22)';
@@ -252,6 +258,7 @@ cv.addEventListener('pointermove',e=>{if(held!==null){const [x,y]=wpos(e);enqueu
 function release(){if(held!==null){held=null;enqueue({action:'release'});}cv.style.cursor=cut?'crosshair':'grab';}
 for(const event of ['pointerup','pointercancel','lostpointercapture'])cv.addEventListener(event,release);
 $('cut').addEventListener('click',()=>{release();cut=!cut;$('cut').setAttribute('aria-pressed',cut);$('cut').textContent='CUT: '+(cut?'ON':'OFF');$('toolhint').textContent=cut?'CLICK A SPRING':'DRAG A NODE';cv.style.cursor=cut?'crosshair':'grab';});
+$('floor').addEventListener('click',()=>{release();enqueue({action:'floor'});});
 $('reset').addEventListener('click',()=>{release();enqueue({action:'reset'});});
 $('pause').addEventListener('click',()=>enqueue({action:'pause'}));
 function runScript(){release();say('Running…');enqueue({action:'script',source:src.value});}

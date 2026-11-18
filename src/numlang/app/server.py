@@ -1,6 +1,7 @@
 """Local Instrument bridge. The browser never integrates or solves equations."""
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import argparse
+from dataclasses import asdict
 import json
 import math
 from pathlib import Path
@@ -124,7 +125,9 @@ class Studio:
                 'h': c.h, 'stiffness': c.stiffness, 'wind': c.wind, 't': c.t,
                 'energy': finite(c.energy), 'exploded': c.exploded, 'reason': c.reason,
                 'drag': c.drag, 'paused': self.paused, 'free_dofs': c.free_dofs,
-                'active_springs': int(c.alive.sum())}
+                'active_springs': int(c.alive.sum()), 'floor_enabled': c.floor_enabled,
+                'floor_y': c.floor_y, 'contacts': c.contacts,
+                'last_impact': asdict(c.last_impact) if c.last_impact else None}
 
     def action(self, data):
         if not isinstance(data, dict):
@@ -138,6 +141,8 @@ class Studio:
         elif kind == 'reset':
             c.reset()
             self.remainder = 0.
+        elif kind == 'floor':
+            c.set_floor(not c.floor_enabled)
         elif kind == 'pause':
             self.paused = not self.paused
             self.remainder = 0.
