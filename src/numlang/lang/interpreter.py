@@ -21,7 +21,7 @@ from .parser import parse_expression
 @dataclass(frozen=True)
 class SceneConfig:
     name: str = 'curtain'
-    cols: int = 12
+    cols: int = 13
     rows: int = 9
     spacing: float = 0.05
     stiffness: float = 150.0
