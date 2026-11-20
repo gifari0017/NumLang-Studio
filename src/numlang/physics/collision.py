@@ -1,6 +1,6 @@
 """Optional horizontal floor: continuous detection on a linear step path.
 
-Positive y points down. Reuse the course root solvers, not an external library.
+Positive y points down. Reuse the existing root solvers, not an external library.
 """
 from dataclasses import dataclass
 import math
