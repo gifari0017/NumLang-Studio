@@ -135,8 +135,8 @@ A GitHub Actions workflow runs the Python 3.14 test suite on a Windows runner af
 
 ## Contributors
 
-- Nukhyai U Marma
-- Abdus Salam Gifari
+- [Abdus Salam Gifari](https://github.com/gifari0017)
+- [Nukhyai U Marma](https://github.com/nuk-michil)
 
 Built with AI-assisted coding and checked by an automated test suite.
 
