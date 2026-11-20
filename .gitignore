@@ -9,4 +9,36 @@ wheels/
 # Virtual environments
 .venv
 
+# Local caches, tooling and build artifacts
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.nbc
+*.nbi
+.env
+.env.*
+!.env.example
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
 numlang-studio-handoff.zip
+numlang-step-*.zip
+numlang-repo-polish.zip
+
+# Academic submission documents (keep outside source control)
+/submission/
+/docs/NumLang_Studio_Report.pdf
+/docs/NumLang_Studio_IEEE_Report.pdf
+/docs/NumLang_Studio_IEEE_Report.docx
+/docs/VIVA.md
+/docs/DEMO.md
+/docs/README.md
+/docs/figures/instrument.png
+/NumLang_Studio_IEEE_Report.pdf
+/NumLang_Studio_IEEE_Report.docx
+/NumLang_Studio_50_Viva_Questions.pdf
+/NumLang_Studio_DEMO.pdf
+/NumLang_Studio_DEMO.md
+/numlang-submission.zip

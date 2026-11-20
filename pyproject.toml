@@ -1,7 +1,19 @@
 [project]
 name = "numlang-studio"
 version = "0.1.0"
-description = "Add your description here"
+description = "NumLang: a small math language and interactive spring-mass cloth simulator built on handwritten numerical methods."
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Abdus Salam Gifari" },
+    { name = "Nukhyai U Marma" },
+]
+keywords = ["numerical-methods", "runge-kutta", "newton-raphson", "gaussian-elimination", "automatic-differentiation", "cloth-simulation", "numba"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Intended Audience :: Education",
+    "Topic :: Scientific/Engineering :: Mathematics",
+]
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -28,3 +40,6 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/numlang"]
+
+[project.urls]
+Repository = "https://github.com/gifari0017/NumLang-Studio"
