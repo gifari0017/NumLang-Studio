@@ -32,7 +32,7 @@ class RootResult:
     history: list[dict] = field(default_factory=list)
 
     def table(self) -> str:
-        """Plain-text iteration table (used in the REPL and the report)."""
+        """Plain-text iteration table (used in the REPL and in trace output)."""
         if not self.history:
             return f"{self.method}: no iterations"
         keys = list(self.history[0].keys())

@@ -2,18 +2,17 @@
 
 # NUMLANG STUDIO
 
-**A numerical methods laboratory you can interact with.**
+**A tiny math language and a live cloth simulator, built on numerical methods written from scratch.**
 
 [![Tests](https://github.com/gifari0017/NumLang-Studio/actions/workflows/tests.yml/badge.svg)](https://github.com/gifari0017/NumLang-Studio/actions/workflows/tests.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Python 3.14](https://img.shields.io/badge/Python-3.14-3776AB?logo=python&logoColor=white)
 ![Numba](https://img.shields.io/badge/Numba-JIT-00A3E0?logo=numba&logoColor=white)
 ![249 tests](https://img.shields.io/badge/tests-249%20passing-2E7D32)
-![Course coverage](https://img.shields.io/badge/course%20topics-9%2F9-E2490F)
 
 </div>
 
-A small mathematical language and interactive spring-mass simulator for Numerical Methods Laboratory (CSE-2204) at Bangladesh University of Professionals. Built with a Python numerical backend and an instrument-inspired browser interface.
+NumLang Studio is a small mathematical language and an interactive spring-mass cloth simulator. A Python numerical backend does all the maths, and an instrument-inspired browser interface lets you drag, cut and stress the cloth while switching between integrators.
 
 ![NumLang Studio Instrument interface running RK4 at 4 ms](assets/instrument.png)
 *The Instrument interface: RK4, h = 4 ms. Everything on screen is computed by the Python engine.*
@@ -23,7 +22,7 @@ A small mathematical language and interactive spring-mass simulator for Numerica
 
 ## What it demonstrates
 
-- All nine course topics: analytical vs numerical comparison, Bisection, False Position, Newton-Raphson, Gaussian elimination, Gauss-Jordan, Euler, Modified Euler (Heun), and RK4.
+- Numerical methods written from scratch: Bisection, False Position, Newton-Raphson, Gaussian elimination, Gauss-Jordan, Euler, Modified Euler (Heun) and RK4, with numerical results compared against exact solutions.
 - A handwritten lexer, recursive-descent parser, abstract syntax tree, dual-number automatic differentiation, symbolic differentiation, interpreter and REPL.
 - A 13 × 9 cloth with 117 nodes, seven pins and 404 structural/shear springs; explicit and linearized implicit integrators, dragging, cutting and an optional floor.
 - A dense, handwritten Gaussian elimination solver with partial pivoting, accelerated with Numba for the implicit step (220 free degrees of freedom initially).
@@ -139,7 +138,7 @@ A GitHub Actions workflow runs the Python 3.14 test suite on a Windows runner af
 - Nukhyai U Marma
 - Abdus Salam Gifari
 
-Department of Computer Science and Engineering, Bangladesh University of Professionals. Developed with AI-assisted coding and iterative verification.
+Built with AI-assisted coding and checked by an automated test suite.
 
 ## License
 

@@ -1,4 +1,8 @@
 # docs
 
-Report, plots, demo script and viva notes go here.
-Empty for now. We fill it in the last weeks.
+Plots generated from real solver runs live in `figures/`.
+Regenerate them with:
+
+```
+uv run python -m numlang.app.plots
+```

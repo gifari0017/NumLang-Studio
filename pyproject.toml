@@ -11,7 +11,7 @@ authors = [
 keywords = ["numerical-methods", "runge-kutta", "newton-raphson", "gaussian-elimination", "automatic-differentiation", "cloth-simulation", "numba"]
 classifiers = [
     "Programming Language :: Python :: 3",
-    "Intended Audience :: Education",
+    "Intended Audience :: Science/Research",
     "Topic :: Scientific/Engineering :: Mathematics",
 ]
 readme = "README.md"
